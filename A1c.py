@@ -11,7 +11,7 @@ from datetime import datetime
 # - add error handling
 # - check report before conversion
 # - add SFTP upload
-# - get away from saving the file to disk
+# - get away from saving the file to disk during conversion
 
 COLUMN_ORDER = ['FileExtractDate','Patient_MRN','BCBSPolicyId','Patient_Fname','Patient_Mname','Patient_Lname','Patient_SSN','Patient_DOB','Patient_Gender','Patient_Addr_Line1','Patient_Addr_Line2','Patient_Addr_City','Patient_Addr_State','Patient_Addr_Zip','EncounterId','EncounterType_Code','EncounterType_CodeType','EncounterType_CodeDesc','ServiceDate','AdmitDate','DischargeDate','Provider_NPI','Provider_BCBSTID','Provider_Fname','Provider_Mname','Provider_Lname','Provider_OrgNPI','Provider_OrgTaxId','Provider_OrgLegalName','Procedure_Code','Procedure_CodeType','Procedure_Desc','Procedure_Status','Procedure_BeginDate','Procedure_EndDate','Problem_Code','Problem_CodeType','Problem_Desc','Problem_Status','Problem_BeginDate','Problem_EndDate','LabOrder_Code','LabOrder_CodeType','LabOrder_Desc','LabOrder_Date','LabResult_Code','LabResult_CodeType','LabResult_Desc','LabResult_Value','LabResult_ValueUOM','LabResult_Range','LabResult_Status','LabResult_ReportDate','VitalSign_Code','VitalSign_CodeType','VitalSign_CodeDesc','VitalSign_Value','VitalSign_ValueUOM','VitalSign_ReportDate','MedicationDrug_Code','MedicationDrug_CodeType','MedicationDrug_CodeDesc','Medication_Status','Medication_BeginDate','Medication_EndDate','VaccineDrug_Code','VaccineDrug_CodeType','VaccineDrug_CodeDesc','Vaccine_Status','Vaccine_AdminDate','AllergyCat_Code','AllergyCat_CodeType','AllergyCat_CodeDesc','Allergen_Code','Allergen_CodeType','Allergen_CodeDescAllergen_Code','Allergy_Status','Allergy_BeginDate','Allergy_EndDate']
 app = Flask(__name__)
@@ -61,7 +61,7 @@ def index():
             <div id="instructional">
                 <h3>BCBS A1C Utility</h3>
                 <p><b>Instructions</b></p>
-                <p>Download the BCBS A1C report from Athena and drop it onto the box below. This utility will make all the neccessary changes and provide a download for you once complete.
+                <p>Download the BCBS reports in (CSV format) from Athena and drop it onto the box below. This utility will make all the neccessary changes and provide a download for you once complete.
             </div>
             <div id="drop-area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
                 <p>Drag and drop a CSV file here</p>
@@ -106,12 +106,25 @@ def index():
     '''
 
 def determineReportType(filename):
-    pass
-
-def convert_A1C(filename):
-    # Read the CSV file into a DataFrame
     with open (filename, 'r') as file:
         df = pd.read_csv(filename)
+    reportName = df.iloc[0, 0]
+    if 'Microalbumin-HS' in reportName:
+        return 'uacr', df.iloc[1:]
+    elif 'A1c' in reportName:
+        return 'a1c', df.iloc[1:]
+    elif 'BP' in reportName:
+        return 'bp', df.iloc[1:]
+    elif 'BMP' in reportName:
+        return 'egfr', df.iloc[1:]
+    else:
+        raise('Report type not detected')
+
+    
+
+def convert_A1C(filename, reportData):
+
+    df = reportData
 
     # modify all dates to MM-DD-YYYY format
     df['patientdob'] = df['patientdob'].str.replace(r'\/', '-', regex=True)
@@ -237,14 +250,14 @@ def convert_A1C(filename):
 
     return csvFile
 
-def convert_uacr(filename):
-    pass
+def convert_uacr(filename, reportData):
+    raise('report type not implemented')
 
-def convert_bp(filename):
-    pass
+def convert_bp(filename, reportData):
+    raise('report type not implemented')
 
-def convert_egfr(filename):
-    pass
+def convert_egfr(filename, reportData):
+    raise('report type not implemented')
 
 
 @app.route('/convert', methods=['POST'])
@@ -252,7 +265,7 @@ def convert():
     file = request.files['file']
     filename = file.filename
     file.save(filename)
-    reportType = determineReportType(filename)
+    reportType, reportData = determineReportType(filename)
     match reportType:
         case 'a1c':
             convert_A1C(filename)
