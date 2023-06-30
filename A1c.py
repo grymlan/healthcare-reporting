@@ -4,12 +4,11 @@ import os
 from datetime import datetime
 
 ###
-# Description: AthenaHealth to BlueCross BlueShield (BCBS) A1C report conversion for the Value Based Care (VBC) team.
+# Description: AthenaHealth to BlueCross BlueShield (BCBS) report conversion for the Value Based Care (VBC) team.
 ###
 
 # TODO List
 # - add error handling
-# - check report before conversion
 # - add SFTP upload
 # - get away from saving the file to disk during conversion
 
