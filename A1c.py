@@ -16,7 +16,7 @@ from datetime import datetime
 COLUMN_ORDER = ['FileExtractDate','Patient_MRN','BCBSPolicyId','Patient_Fname','Patient_Mname','Patient_Lname','Patient_SSN','Patient_DOB','Patient_Gender','Patient_Addr_Line1','Patient_Addr_Line2','Patient_Addr_City','Patient_Addr_State','Patient_Addr_Zip','EncounterId','EncounterType_Code','EncounterType_CodeType','EncounterType_CodeDesc','ServiceDate','AdmitDate','DischargeDate','Provider_NPI','Provider_BCBSTID','Provider_Fname','Provider_Mname','Provider_Lname','Provider_OrgNPI','Provider_OrgTaxId','Provider_OrgLegalName','Procedure_Code','Procedure_CodeType','Procedure_Desc','Procedure_Status','Procedure_BeginDate','Procedure_EndDate','Problem_Code','Problem_CodeType','Problem_Desc','Problem_Status','Problem_BeginDate','Problem_EndDate','LabOrder_Code','LabOrder_CodeType','LabOrder_Desc','LabOrder_Date','LabResult_Code','LabResult_CodeType','LabResult_Desc','LabResult_Value','LabResult_ValueUOM','LabResult_Range','LabResult_Status','LabResult_ReportDate','VitalSign_Code','VitalSign_CodeType','VitalSign_CodeDesc','VitalSign_Value','VitalSign_ValueUOM','VitalSign_ReportDate','MedicationDrug_Code','MedicationDrug_CodeType','MedicationDrug_CodeDesc','Medication_Status','Medication_BeginDate','Medication_EndDate','VaccineDrug_Code','VaccineDrug_CodeType','VaccineDrug_CodeDesc','Vaccine_Status','Vaccine_AdminDate','AllergyCat_Code','AllergyCat_CodeType','AllergyCat_CodeDesc','Allergen_Code','Allergen_CodeType','Allergen_CodeDescAllergen_Code','Allergy_Status','Allergy_BeginDate','Allergy_EndDate']
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/') # landing page
 def index():
         return '''
         <html>
@@ -55,11 +55,11 @@ def index():
                     font-family: Arial, sans-serif;
                 }
             </style>
-            <title>BCBS A1C Utility</title>
+            <title>BCBS Reporting Utility</title>
         </head>
         <body>
             <div id="instructional">
-                <h3>BCBS A1C Utility</h3>
+                <h3>BCBS Reporting Utility</h3>
                 <p><b>Instructions</b></p>
                 <p>Download the BCBS reports in (CSV format) from Athena and drop it onto the box below. This utility will make all the neccessary changes and provide a download for you once complete.
             </div>
@@ -107,22 +107,32 @@ def index():
 
 def determineReportType(filename):
     with open (filename, 'r') as file:
-        df = pd.read_csv(filename)
-    reportName = df.iloc[0, 0]
+        reportName = file.readline()
+        remainingFile = file.readlines()[0:]
+
+    with open (filename, 'w') as outputFile:
+        outputFile.writelines(remainingFile)
+
+    df = pd.read_csv(filename)
+        
+    print(reportName)
     if 'Microalbumin-HS' in reportName:
-        return 'uacr', df.iloc[1:]
+        # remove the first row and return reportType and result
+        return 'uacr', df
+    
     elif 'A1c' in reportName:
-        return 'a1c', df.iloc[1:]
+        return 'a1c', df
+    
     elif 'BP' in reportName:
-        return 'bp', df.iloc[1:]
+        return 'bp', df
+    
     elif 'BMP' in reportName:
-        return 'egfr', df.iloc[1:]
+        return 'egfr', df
     else:
         raise('Report type not detected')
 
-    
 
-def convert_A1C(filename, reportData):
+def convert_A1C(reportData):
 
     df = reportData
 
@@ -246,17 +256,17 @@ def convert_A1C(filename, reportData):
     df = df[COLUMN_ORDER]
 
     # Write the modified DataFrame back to a CSV file
-    csvFile = df.to_csv('BCBS A1C UPLOAD.txt', sep='|', index=False)
+    csvFile = df.to_csv(f'BCBS_A1C_UPLOAD_{formatted_date}.txt', sep='|', index=False)
 
-    return csvFile
+    return f'BCBS_A1C_UPLOAD_{formatted_date}.txt'
 
-def convert_uacr(filename, reportData):
+def convert_uacr(reportData):
     raise('report type not implemented')
 
-def convert_bp(filename, reportData):
+def convert_bp(reportData):
     raise('report type not implemented')
 
-def convert_egfr(filename, reportData):
+def convert_egfr(reportData):
     raise('report type not implemented')
 
 
@@ -268,23 +278,23 @@ def convert():
     reportType, reportData = determineReportType(filename)
     match reportType:
         case 'a1c':
-            convert_A1C(filename)
+            modifiedReport = convert_A1C(reportData)
         case 'uacr':
-            convert_uacr(filename)
+            modifiedReport = convert_uacr(reportData)
         case 'bp':
-            convert_bp(filename)
+            modifiedReport = convert_bp(reportData)
         case 'egfr':
-            convert_egfr(filename)
+            modifiedReport = convert_egfr(reportData)
 
     # Remove the temporary CSV file
     os.remove(filename)
 
     # Provide a download link for the converted file
-    return f'<a href="/download">Download Converted File</a>'
+    return f'<a href="/download/{modifiedReport}">Download Converted File</a>'
 
-@app.route('/download')
-def download():
-    converted_file = 'converted_file.txt'
+@app.route('/download/<modifiedReport>')
+def download(modifiedReport):
+    converted_file = modifiedReport
     return send_file(converted_file, as_attachment=True)
 
 if __name__ == '__main__':
