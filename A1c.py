@@ -12,7 +12,7 @@ from datetime import datetime
 # - add SFTP upload
 # - get away from saving the file to disk during conversion
 
-COLUMN_ORDER = ['FileExtractDate','Patient_MRN','BCBSPolicyId','Patient_Fname','Patient_Mname','Patient_Lname','Patient_SSN','Patient_DOB','Patient_Gender','Patient_Addr_Line1','Patient_Addr_Line2','Patient_Addr_City','Patient_Addr_State','Patient_Addr_Zip','EncounterId','EncounterType_Code','EncounterType_CodeType','EncounterType_CodeDesc','ServiceDate','AdmitDate','DischargeDate','Provider_NPI','Provider_BCBSTID','Provider_Fname','Provider_Mname','Provider_Lname','Provider_OrgNPI','Provider_OrgTaxId','Provider_OrgLegalName','Procedure_Code','Procedure_CodeType','Procedure_Desc','Procedure_Status','Procedure_BeginDate','Procedure_EndDate','Problem_Code','Problem_CodeType','Problem_Desc','Problem_Status','Problem_BeginDate','Problem_EndDate','LabOrder_Code','LabOrder_CodeType','LabOrder_Desc','LabOrder_Date','LabResult_Code','LabResult_CodeType','LabResult_Desc','LabResult_Value','LabResult_ValueUOM','LabResult_Range','LabResult_Status','LabResult_ReportDate','VitalSign_Code','VitalSign_CodeType','VitalSign_CodeDesc','VitalSign_Value','VitalSign_ValueUOM','VitalSign_ReportDate','MedicationDrug_Code','MedicationDrug_CodeType','MedicationDrug_CodeDesc','Medication_Status','Medication_BeginDate','Medication_EndDate','VaccineDrug_Code','VaccineDrug_CodeType','VaccineDrug_CodeDesc','Vaccine_Status','Vaccine_AdminDate','AllergyCat_Code','AllergyCat_CodeType','AllergyCat_CodeDesc','Allergen_Code','Allergen_CodeType','Allergen_CodeDescAllergen_Code','Allergy_Status','Allergy_BeginDate','Allergy_EndDate']
+COLUMN_ORDER = ['FileExtractDate','Patient_MRN','BCBSPolicyId','Patient_Fname','Patient_Mname','Patient_Lname','Patient_SSN','Patient_DOB','Patient_Gender','Patient_Addr_Line1','Patient_Addr_Line2','Patient_Addr_City','Patient_Addr_State','Patient_Addr_Zip','EncounterId','EncounterType_Code','EncounterType_CodeType','EncounterType_CodeDesc','ServiceDate','AdmitDate','DischargeDate','Provider_NPI','Provider_BCBSTID','Provider_Fname','Provider_Mname','Provider_Lname','Provider_OrgNPI','Provider_OrgTaxId','Provider_OrgLegalName','Procedure_Code','Procedure_CodeType','Procedure_Desc','Procedure_Status','Procedure_BeginDate','Procedure_EndDate','Problem_Code','Problem_CodeType','Problem_Desc','Problem_Status','Problem_BeginDate','Problem_EndDate','LabOrder_Code','LabOrder_CodeType','LabOrder_Desc','LabOrder_Date','LabResult_Code','LabResult_CodeType','LabResult_Desc','LabResult_Value','LabResult_ValueUOM','LabResult_Range','LabResult_Status','LabResult_ReportDate','VitalSign_Code','VitalSign_CodeType','VitalSign_CodeDesc','VitalSign_Value','VitalSign_ValueUOM','VitalSign_ReportDate','MedicationDrug_Code','MedicationDrug_CodeType','MedicationDrug_CodeDesc','Medication_Status','Medication_BeginDate','Medication_EndDate','VaccineDrug_Code','VaccineDrug_CodeType','VaccineDrug_CodeDesc','Vaccine_Status','Vaccine_AdminDate','AllergyCat_Code','AllergyCat_CodeType','AllergyCat_CodeDesc','Allergen_Code','Allergen_CodeType','Allergen_CodeDesc','Allergy_Status','Allergy_BeginDate','Allergy_EndDate']
 app = Flask(__name__)
 
 @app.route('/') # landing page
@@ -236,7 +236,7 @@ def convert_A1C(reportData):
         'AllergyCat_CodeDesc': '',
         'Allergen_Code': '',
         'Allergen_CodeType': '',
-        'Allergen_CodeDescAllergen_Code': '',
+        'Allergen_CodeDesc': '',
         'Allergy_Status': '',
         'Allergy_BeginDate': '',
         'Allergy_EndDate': ''
@@ -260,6 +260,8 @@ def convert_A1C(reportData):
     return f'BCBS_A1C_UPLOAD_{formatted_date}.txt'
 
 def convert_uacr(reportData):
+    df = reportData
+
     raise('report type not implemented')
 
 def convert_bp(reportData):
