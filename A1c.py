@@ -13,8 +13,16 @@ from datetime import datetime
 # - get away from saving the file to disk during conversion
 # - add support for BMI reporting
 # - add logic to add columns that are missing
+# - modulerize column renaming
 
+###
+# Change Log - ./CHANGELOG.md
+### 
+
+
+# Structured Order & the master column listing
 COLUMN_ORDER = ['FileExtractDate','Patient_MRN','BCBSPolicyId','Patient_Fname','Patient_Mname','Patient_Lname','Patient_SSN','Patient_DOB','Patient_Gender','Patient_Addr_Line1','Patient_Addr_Line2','Patient_Addr_City','Patient_Addr_State','Patient_Addr_Zip','EncounterId','EncounterType_Code','EncounterType_CodeType','EncounterType_CodeDesc','ServiceDate','AdmitDate','DischargeDate','Provider_NPI','Provider_BCBSTID','Provider_Fname','Provider_Mname','Provider_Lname','Provider_OrgNPI','Provider_OrgTaxId','Provider_OrgLegalName','Procedure_Code','Procedure_CodeType','Procedure_Desc','Procedure_Status','Procedure_BeginDate','Procedure_EndDate','Problem_Code','Problem_CodeType','Problem_Desc','Problem_Status','Problem_BeginDate','Problem_EndDate','LabOrder_Code','LabOrder_CodeType','LabOrder_Desc','LabOrder_Date','LabResult_Code','LabResult_CodeType','LabResult_Desc','LabResult_Value','LabResult_ValueUOM','LabResult_Range','LabResult_Status','LabResult_ReportDate','VitalSign_Code','VitalSign_CodeType','VitalSign_CodeDesc','VitalSign_Value','VitalSign_ValueUOM','VitalSign_ReportDate','MedicationDrug_Code','MedicationDrug_CodeType','MedicationDrug_CodeDesc','Medication_Status','Medication_BeginDate','Medication_EndDate','VaccineDrug_Code','VaccineDrug_CodeType','VaccineDrug_CodeDesc','Vaccine_Status','Vaccine_AdminDate','AllergyCat_Code','AllergyCat_CodeType','AllergyCat_CodeDesc','Allergen_Code','Allergen_CodeType','Allergen_CodeDesc','Allergy_Status','Allergy_BeginDate','Allergy_EndDate']
+
 app = Flask(__name__)
 
 @app.route('/') # landing page
@@ -23,16 +31,19 @@ def index():
         <html>
         <head>
             <style>
+                body {
+                    background-color: #191919;
+                }
                 h3 {
                     font-family: Arial, sans-serif;
-                    color: #5b5b5b;
+                    color: #b2b2b2;
                 }
                 #instructional {
                     width: 500px;
                     height: 150px;
                     border: 2px solid #ccc;
                     border-radius: 5px;
-                    background-color: #abedbc;
+                    background-color: #696969;
                     margin: 20 auto;
                     text-align: center;
                     padding: 20px;
@@ -52,7 +63,7 @@ def index():
                 }
                 p {
                     font-size: 16px;
-                    color: #5b5b5b;
+                    color: #b2b2b2;
                     font-family: Arial, sans-serif;
                 }
             </style>
@@ -298,13 +309,13 @@ def convert_A1C(reportData):
 def convert_uacr(reportData):
     df = reportData
 
-    raise('report type not implemented')
+    raise ValueError('report type not implemented')
 
 def convert_bp(reportData):
-    raise('report type not implemented')
+    raise ValueError('report type not implemented')
 
 def convert_egfr(reportData):
-    raise('report type not implemented')
+    raise ValueError('report type not implemented')
 
 def convert_bmi(reportData):
     # Documentation for BMI Formatting - https://docs.google.com/document/d/1DnOtM9fTy7ANS5U0oMk8yfqwzW1ga4t4E4CAEWqbdG0/edit
@@ -312,8 +323,6 @@ def convert_bmi(reportData):
 
         # modify all dates to MM-DD-YYYY format
     df['patientdob'] = df['patientdob'].str.replace(r'\/', '-', regex=True)
-    df['labdate'] = df['labdate'].str.replace(r'\/', '-', regex=True)
-    df['order chartdate'] = df['order chartdate'].str.replace(r'\/', '-', regex=True)
 
     # Rename columns
     df = df.rename(columns={'patientid': 'Patient_MRN'})
@@ -331,7 +340,6 @@ def convert_bmi(reportData):
     df = df.rename(columns={'patient zip': 'Patient_Addr_Zip'})
     df = df.rename(columns={'prim prvdr npi no': 'Provider_NPI'})
     df = df.rename(columns={'order name (single)': 'LabOrder_CodeDesc'})
-    df = df.rename(columns={'order chartdate': 'LabOrder_Date'})
 
     # Get today's date
     today = datetime.today()
@@ -342,77 +350,18 @@ def convert_bmi(reportData):
     # Add date column at the beginning
     df.insert(0, 'FileExtractDate', formatted_date)
 
-    new_columns = {
-        'EncounterId': '',
-        'EncounterType_Code': '',
-        'EncounterType_CodeType': '',
-        'EncounterType_CodeDesc': '',
-        'ServiceDate': '',
-        'AdmitDate': '',
-        'DischargeDate': '',
-        'Provider_NPI': '',
-        'Provider_BCBSTID': '',
-        'Provider_Fname': '',
-        'Provider_Mname': '',
-        'Provider_Lname': '',
-        'Provider_OrgNPI': '',
-        'Provider_OrgTaxId': '',
-        'Provider_OrgLegalName': '',
-        'Procedure_Code': '',
-        'Procedure_CodeType': '',
-        'Procedure_Desc': '',
-        'Procedure_Status': '',
-        'Procedure_BeginDate': '',
-        'Procedure_EndDate': '',
-        'Problem_Code': '',
-        'Problem_CodeType': '',
-        'Problem_Desc': '',
-        'Problem_Status': '',
-        'Problem_BeginDate': '',
-        'Problem_EndDate': '',
-        'LabOrder_Code': '83036',
-        'LabOrder_CodeType': 'CPT',
-        'LabOrder_Desc': 'HBA1C (HEMOGLOBIN A1C), BLOOD',
-        'LabResult_Code': '4548-4',
-        'LabResult_CodeType': 'LOINC',
-        'LabResult_Desc': 'Hemoglobin A1c/Hemoglobin.total in Blood',
-        'LabResult_ValueUOM': '% Hgb',
-        'LabResult_Range': '',
-        'LabResult_Status': 'Final',
-        'VitalSign_Code': '',
-        'VitalSign_CodeType': '',
-        'VitalSign_CodeDesc': '',
-        'VitalSign_Value': '',
-        'VitalSign_ValueUOM': '',
-        'VitalSign_ReportDate': '',
-        'MedicationDrug_Code': '',
-        'MedicationDrug_CodeType': '',
-        'MedicationDrug_CodeDesc': '',
-        'Medication_Status': '',
-        'Medication_BeginDate': '',
-        'Medication_EndDate': '',
-        'VaccineDrug_Code': '',
-        'VaccineDrug_CodeType': '',
-        'VaccineDrug_CodeDesc': '',
-        'Vaccine_Status': '',
-        'Vaccine_AdminDate': '',
-        'AllergyCat_Code': '',
-        'AllergyCat_CodeType': '',
-        'AllergyCat_CodeDesc': '',
-        'Allergen_Code': '',
-        'Allergen_CodeType': '',
-        'Allergen_CodeDesc': '',
-        'Allergy_Status': '',
-        'Allergy_BeginDate': '',
-        'Allergy_EndDate': ''
-    }
+    # Add missing columns
+    existingColumns = df.columns.tolist()
+    allColumns = existingColumns + COLUMN_ORDER
+    # Remove duplicates
+    uniqueColumns = list(set(allColumns))
+    # Reindex the DataFrame with the updated column names
+    df = df.reindex(columns=uniqueColumns)
 
-    # Add the new columns to the DataFrame with the same value for each row
-    for column, value in new_columns.items():
-        df[column] = value
-
-        # Reorder the columns based on the desired order
+    # Reorder the columns based on the desired order
     df = df[COLUMN_ORDER]
+
+    # TODO Vital Sign Code
 
     # Write the modified DataFrame back to a CSV file
     csvFile = df.to_csv(f'BCBS_BMI_UPLOAD_{formatted_date}.txt', sep='|', index=False)
@@ -439,7 +388,7 @@ def convert():
         case 'egfr':
             modifiedReport = convert_egfr(reportData)
         case 'bmi':
-            modifiedReport = convert_egfr(reportData)
+            modifiedReport = convert_bmi(reportData)
 
     # Remove the temporary CSV file
     os.remove(filename)
