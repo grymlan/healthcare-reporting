@@ -5,18 +5,7 @@ from datetime import datetime
 
 ###
 # Description: AthenaHealth to BlueCross BlueShield (BCBS) report conversion (A1C, BP, BMP, BMI. uACR) for the Value Based Care (VBC) team.
-###
-
-# TODO List
-# - add error handling
-# - add SFTP upload
-# - get away from saving the file to disk during conversion
-# - add support for BMI reporting
-# - add logic to add columns that are missing
-# - modulerize column renaming
-
-###
-# Change Log - ./CHANGELOG.md
+# v 0.1.0
 ### 
 
 
@@ -145,37 +134,27 @@ def determineReportType(filename):
     else:
         raise('Report type not detected')
 
-def get_percentile(gender: str, age: float, bmi: float):
+def get_percentile(row):
     ''' 
-    Find BMI percentile based on BMI charts from the CDC.
-
-    Parameters
-    ----------
-    gender : str
-        Specify ['male','Male','M','m'] or ['female','Female','F','f']
-    age : int
-        Specify age in months (24months-240months)
-    bmi : float
-        Specify BMI number (5 decimal places)
-    
+    Find BMI percentile based on BMI charts from the CDC.    
     '''
 
-    df_male = pd.read_csv('BMI-chart-male.csv')
-    df_female = pd.read_csv('BMI-chart-female.csv')
+    df_male = pd.read_csv('./BMI-chart-male.csv')
+    df_female = pd.read_csv('./BMI-chart-female.csv')
     
     try:
-        if gender in ['male','Male','M','m']:
-            closest_age_percentiles = df_male.loc[(df_male['Age (in months)']-age).abs().idxmin()]
-            diffs = abs(closest_age_percentiles- bmi)
+        if row['Patient_Gender'] in ['male','Male','M','m']:
+            closest_age_percentiles = df_male.loc[(df_male['Age (in months)']-row['ptnt age mnths']).abs().idxmin()]
+            diffs = abs(closest_age_percentiles- row['enc BMI'])
             closest_col = diffs.idxmin()
             percentile = closest_col.split()[0]
-            return {'percentile': f'{percentile} percentile' }
-        if gender in ['female','Female','F','f']:
-            closest_age_percentiles = df_female.loc[(df_female['Age (in months)']-age).abs().idxmin()]
-            diffs = abs(closest_age_percentiles- bmi)
+            return percentile[:-2]
+        if row['Patient_Gender'] in ['female','Female','F','f']:
+            closest_age_percentiles = df_female.loc[(df_female['Age (in months)']-row['ptnt age mnths']).abs().idxmin()]
+            diffs = abs(closest_age_percentiles- row['enc BMI'])
             closest_col = diffs.idxmin()
             percentile = closest_col.split()[0]
-            return {'percentile': f'{percentile} percentile' }
+            return percentile[:-2]
     except Exception as e:
         pass
 
@@ -340,6 +319,8 @@ def convert_bmi(reportData):
     df = df.rename(columns={'patient zip': 'Patient_Addr_Zip'})
     df = df.rename(columns={'prim prvdr npi no': 'Provider_NPI'})
     df = df.rename(columns={'order name (single)': 'LabOrder_CodeDesc'})
+    df = df.rename(columns={'enc BMI date': 'ServiceDate'})
+    df = df.rename(columns={'enc Wt date': 'VitalSign_ReportDate'})
 
     # Get today's date
     today = datetime.today()
@@ -349,6 +330,19 @@ def convert_bmi(reportData):
 
     # Add date column at the beginning
     df.insert(0, 'FileExtractDate', formatted_date)
+
+    # Apply the BMI percentile function to VitalSign_Value
+    df['VitalSign_Value'] = df.apply(get_percentile,axis=1)
+
+    # Create dictionary of new values to add to report
+    new_columns = { 'VitalSign_Code': '59576-9',
+                    'VitalSign_CodeType': 'LOINC',
+                    'VitalSign_ValueUOM': 'pct'
+    }
+
+    # Add the dictionary to the DataFrame with the same value for each row
+    for column, value in new_columns.items():
+        df[column] = value
 
     # Add missing columns
     existingColumns = df.columns.tolist()
@@ -360,8 +354,6 @@ def convert_bmi(reportData):
 
     # Reorder the columns based on the desired order
     df = df[COLUMN_ORDER]
-
-    # TODO Vital Sign Code
 
     # Write the modified DataFrame back to a CSV file
     csvFile = df.to_csv(f'BCBS_BMI_UPLOAD_{formatted_date}.txt', sep='|', index=False)
@@ -389,9 +381,6 @@ def convert():
             modifiedReport = convert_egfr(reportData)
         case 'bmi':
             modifiedReport = convert_bmi(reportData)
-
-    # Remove the temporary CSV file
-    os.remove(filename)
 
     # Provide a download link for the converted file
     return f'<a href="/download/{modifiedReport}">Download Converted File</a>'
